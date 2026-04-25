@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KI Kalorien Tracker</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+        .container { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h2 { text-align: center; color: #333; }
+        .input-group { display: flex; gap: 8px; margin-bottom: 10px; }
+        input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 10px; }
+        button { padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-ai { background: #6200ee; color: white; width: 100%; margin-bottom: 10px; }
+        .btn-add { background: #28a745; color: white; width: 100%; margin-bottom: 20px; }
+        .total-box { font-size: 24px; text-align: center; margin: 15px 0; color: #2c3e50; font-weight: bold; }
+        .list-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🍎 KI Tracker</h2>
+    
+    <input type="text" id="food" placeholder="z.B. 2 Scheiben Pizza" style="width: calc(100% - 26px); margin-bottom: 10px;">
+    
+    <button class="btn-ai" id="ai-btn" onclick="askAI()">✨ Kalorien mit KI schätzen</button>
+    
+    <div class="input-group">
+        <input type="number" id="calories" placeholder="kcal">
+    </div>
+    
+    <button class="btn-add" onclick="addEntry()">In Liste eintragen</button>
+
+    <div class="total-box">Gesamt: <span id="total-kcal">0</span> kcal</div>
+    <div id="entry-list"></div>
+    
+    <button onclick="clearAll()" style="background:#eee; width: 100%; margin-top: 20px; color: #666;">Tag zurücksetzen</button>
+</div>
+
+<script>
+    // --- WICHTIG: ÄNDERE DIESE URL ZU DEINER RENDER-URL ---
+    const SERVER_URL = 'https://calc-1-fss0.onrender.com/ask'; 
+
+    let entries = JSON.parse(localStorage.getItem('myCalories')) || [];
+
+    async function askAI() {
+        const foodText = document.getElementById('food').value;
+        const aiBtn = document.getElementById('ai-btn');
+        
+        if (!foodText) return alert("Schreib erst auf, was du gegessen hast!");
+
+        aiBtn.innerText = "KI überlegt...";
+        aiBtn.disabled = true;
+
+        try {
+            const response = await fetch(SERVER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: foodText })
+            });
+            const data = await response.json();
+            if (data.kcal) {
+                document.getElementById('calories').value = data.kcal;
+            }
+        } catch (e) {
+            alert("Fehler: Prüfe ob dein Server bei Render 'Live' ist!");
+        } finally {
+            aiBtn.innerText = "✨ Kalorien mit KI schätzen";
+            aiBtn.disabled = false;
+        }
+    }
+
+    function updateUI() {
+        const list = document.getElementById('entry-list');
+        const totalDisplay = document.getElementById('total-kcal');
+        list.innerHTML = '';
+        let total = 0;
+
+        entries.forEach(item => {
+            total += item.kcal;
+            const div = document.createElement('div');
+            div.className = 'list-item';
+            div.innerHTML = `<span>${item.food}</span> <span><b>${item.kcal}</b> kcal</span>`;
+            list.appendChild(div);
+        });
+
+        totalDisplay.innerText = total;
+        localStorage.setItem('myCalories', JSON.stringify(entries));
+    }
+
+    function addEntry() {
+        const food = document.getElementById('food').value;
+        const kcal = parseInt(document.getElementById('calories').value);
+        if (food && kcal) {
+            entries.unshift({ food, kcal });
+            document.getElementById('food').value = '';
+            document.getElementById('calories').value = '';
+            updateUI();
+        }
+    }
+
+    function clearAll() {
+        if(confirm("Alles löschen?")) { entries = []; updateUI(); }
+    }
+
+    updateUI();
+</script>
+
+</body>
+</html>
